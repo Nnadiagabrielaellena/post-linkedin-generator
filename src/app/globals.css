@@ -1,26 +1,217 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ─── Design tokens ────────────────────────────────────────────────────
+   Layout: dark sidebar (240px) + light main content area
+   Accent: amber/gold — deliberate choice for a creative writing tool
+────────────────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --bg: #F4F7FB;
+  --surface: #FFFFFF;
+  --sidebar-bg: #0C1821;
+  --sidebar-hover: #152a3a;
+  --sidebar-active: #1a3347;
+  --sidebar-text: #94afc4;
+  --sidebar-text-active: #FFFFFF;
+  --accent: #F59E0B;
+  --accent-hover: #D97706;
+  --accent-fg: #0C1821;
+  --text-primary: #0C1821;
+  --text-secondary: #5A7490;
+  --border: #DDE5EF;
+  --border-focus: #F59E0B;
+  --error: #EF4444;
+  --success: #10B981;
+  --radius: 10px;
+  --font: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --bg: #0A1420;
+    --surface: #0F1E2E;
+    --sidebar-bg: #070f18;
+    --sidebar-hover: #0f1e2d;
+    --sidebar-active: #152a3a;
+    --sidebar-text: #6a8fa8;
+    --sidebar-text-active: #FFFFFF;
+    --text-primary: #E8F0F8;
+    --text-secondary: #7A9AB8;
+    --border: #1C3047;
+    --border-focus: #F59E0B;
+    color-scheme: dark;
   }
 }
 
+:root[data-theme="dark"] {
+  --bg: #0A1420;
+  --surface: #0F1E2E;
+  --sidebar-bg: #070f18;
+  --sidebar-hover: #0f1e2d;
+  --sidebar-active: #152a3a;
+  --sidebar-text: #6a8fa8;
+  --sidebar-text-active: #FFFFFF;
+  --text-primary: #E8F0F8;
+  --text-secondary: #7A9AB8;
+  --border: #1C3047;
+  --border-focus: #F59E0B;
+  color-scheme: dark;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Form elements ─────────────────────────────────────────────────── */
+.field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  letter-spacing: 0.01em;
+}
+
+.field-input {
+  width: 100%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  font-family: var(--font);
+  font-size: 15px;
+  color: var(--text-primary);
+  transition: border-color 0.15s;
+  outline: none;
+}
+
+.field-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.field-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+textarea.field-input {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* ─── Buttons ───────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  padding: 11px 24px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-ghost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Cards ─────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+/* ─── Page header ───────────────────────────────────────────────────── */
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  text-wrap: balance;
+}
+
+.page-subtitle {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0 0 28px;
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ─── Focus visible ─────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

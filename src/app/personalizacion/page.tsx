@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import AppLayout from '@/components/AppLayout';
+import ErrorBanner from '@/components/ErrorBanner';
+import Spinner from '@/components/Spinner';
 import { getOrCreateSessionId } from '@/lib/session';
 import { Personalizacion } from '@/lib/types';
 
@@ -195,18 +197,7 @@ export default function PersonalizacionPage() {
             </div>
           </div>
 
-          {error && (
-            <div style={{
-              background: 'color-mix(in srgb, var(--error) 8%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)',
-              borderRadius: 8,
-              padding: '10px 14px',
-              color: 'var(--error)',
-              fontSize: 14,
-            }}>
-              {error}
-            </div>
-          )}
+          <ErrorBanner message={error} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <button type="submit" className="btn-primary" disabled={saving}>
@@ -243,20 +234,3 @@ export default function PersonalizacionPage() {
   );
 }
 
-function Spinner() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      style={{ animation: 'spin 0.8s linear infinite' }}
-    >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
-  );
-}

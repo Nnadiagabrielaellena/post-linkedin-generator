@@ -23,6 +23,19 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# IDE local configs
+.vscode/settings.json
+.vscode/launch.json
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
 
 # debug
 npm-debug.log*

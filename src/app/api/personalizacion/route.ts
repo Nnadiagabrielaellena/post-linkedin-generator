@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase-server';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   const sessionId = request.headers.get('x-session-id');
-  if (!sessionId) {
-    return NextResponse.json({ error: 'Session ID requerido' }, { status: 400 });
+  if (!sessionId || !UUID_REGEX.test(sessionId)) {
+    return NextResponse.json({ error: 'Session ID inválido' }, { status: 400 });
   }
 
   const supabase = createServerClient();
@@ -15,7 +17,8 @@ export async function GET(request: NextRequest) {
     .single();
 
   if (error && error.code !== 'PGRST116') {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Supabase error [GET /api/personalizacion]:', error);
+    return NextResponse.json({ error: 'Error al obtener el perfil.' }, { status: 500 });
   }
 
   return NextResponse.json({ data: data ?? null });
@@ -23,12 +26,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const sessionId = request.headers.get('x-session-id');
-  if (!sessionId) {
-    return NextResponse.json({ error: 'Session ID requerido' }, { status: 400 });
+  if (!sessionId || !UUID_REGEX.test(sessionId)) {
+    return NextResponse.json({ error: 'Session ID inválido' }, { status: 400 });
   }
 
   const body = await request.json();
   const { descripcion_negocio, industria, audiencia_objetivo, ejemplos_posts } = body;
+
+  // Basic type checks to prevent unexpected data shapes
+  if (
+    (descripcion_negocio !== undefined && typeof descripcion_negocio !== 'string') ||
+    (industria !== undefined && typeof industria !== 'string') ||
+    (audiencia_objetivo !== undefined && typeof audiencia_objetivo !== 'string') ||
+    (ejemplos_posts !== undefined && !Array.isArray(ejemplos_posts))
+  ) {
+    return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+  }
 
   const supabase = createServerClient();
   const { data, error } = await supabase
@@ -36,10 +49,12 @@ export async function POST(request: NextRequest) {
     .upsert(
       {
         session_id: sessionId,
-        descripcion_negocio: descripcion_negocio ?? '',
-        industria: industria ?? '',
-        audiencia_objetivo: audiencia_objetivo ?? '',
-        ejemplos_posts: ejemplos_posts ?? [],
+        descripcion_negocio: String(descripcion_negocio ?? '').slice(0, 2000),
+        industria: String(industria ?? '').slice(0, 200),
+        audiencia_objetivo: String(audiencia_objetivo ?? '').slice(0, 1000),
+        ejemplos_posts: (ejemplos_posts ?? [])
+          .slice(0, 3)
+          .map((e: unknown) => String(e ?? '').slice(0, 3000)),
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'session_id' }
@@ -48,7 +63,8 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Supabase error [POST /api/personalizacion]:', error);
+    return NextResponse.json({ error: 'No se pudo guardar el perfil.' }, { status: 500 });
   }
 
   return NextResponse.json({ data });

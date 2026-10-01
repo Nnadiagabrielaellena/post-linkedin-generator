@@ -5,8 +5,8 @@ import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import { getOrCreateSessionId } from '@/lib/session';
 import { PostGenerado } from '@/lib/types';
-import { getSupabase } from '@/lib/supabase';
 import CopyButton from '@/components/CopyButton';
+import { formatDateShort } from '@/lib/utils';
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({ total: 0 });
@@ -15,22 +15,18 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const sessionId = getOrCreateSessionId();
-    if (!sessionId) return;
+    if (!sessionId) { setLoading(false); return; }
 
-    async function fetchData() {
-      const { data, count } = await getSupabase()
-        .from('posts_generados')
-        .select('*', { count: 'exact' })
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      setStats({ total: count ?? 0 });
-      setRecientes((data as PostGenerado[]) ?? []);
-      setLoading(false);
-    }
-
-    fetchData();
+    fetch('/api/posts?limit=3&count=true', {
+      headers: { 'x-session-id': sessionId },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        setStats({ total: json.count ?? 0 });
+        setRecientes((json.posts as PostGenerado[]) ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -92,7 +88,7 @@ export default function DashboardPage() {
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{item.idea}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                      {item.variaciones} variación{item.variaciones !== 1 ? 'es' : ''} · {formatDate(item.created_at)}
+                      {item.variaciones} variación{item.variaciones !== 1 ? 'es' : ''} · {formatDateShort(item.created_at)}
                     </div>
                   </div>
                 </div>
@@ -172,10 +168,3 @@ function EmptyState() {
   );
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}

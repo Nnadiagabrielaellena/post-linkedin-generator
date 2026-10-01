@@ -1,8 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createServerClient } from '@/lib/supabase-server';
+import { checkRateLimit } from '@/lib/rate-limit';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+function geminiUserError(msg: string): string {
+  if (msg.includes('503') || msg.includes('Service Unavailable'))
+    return 'Gemini está saturado en este momento. Espera unos segundos e intenta de nuevo.';
+  if (msg.includes('404') || msg.includes('no longer available'))
+    return 'Este modelo de Gemini no está disponible para tu API key. Contacta soporte.';
+  if (msg.includes('API_KEY') || msg.includes('401') || msg.includes('403'))
+    return 'API key de Gemini inválida. Verifica tu GOOGLE_GENERATIVE_AI_API_KEY en .env.local.';
+  return 'Error al generar los posts. Intenta de nuevo.';
+}
 
 function buildPrompt(
   idea: string,
@@ -50,9 +65,18 @@ Devuelve ÚNICAMENTE un JSON válido con este formato exacto, sin markdown, sin 
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+  const { allowed } = checkRateLimit(`generar:${ip}`, 10, 60_000); // 10 req/min por IP
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Demasiadas peticiones. Espera un momento e intenta de nuevo.' },
+      { status: 429 }
+    );
+  }
+
   const sessionId = request.headers.get('x-session-id');
-  if (!sessionId) {
-    return NextResponse.json({ error: 'Session ID requerido' }, { status: 400 });
+  if (!sessionId || !UUID_REGEX.test(sessionId)) {
+    return NextResponse.json({ error: 'Session ID inválido' }, { status: 400 });
   }
 
   const body = await request.json();
@@ -75,8 +99,6 @@ export async function POST(request: NextRequest) {
 
   const prompt = buildPrompt(idea.trim(), numVariaciones, perfil);
 
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
   try {
     const model = genAI.getGenerativeModel({ model: 'gemini-3.1-flash-lite' });
 
@@ -90,9 +112,9 @@ export async function POST(request: NextRequest) {
         const isSaturated = msg.includes('503') || msg.includes('Service Unavailable');
         if (isSaturated && attempt < 4) {
           await sleep(attempt * 1500);
-          continue;
+        } else {
+          throw err;
         }
-        throw err;
       }
     }
 
@@ -134,13 +156,6 @@ export async function POST(request: NextRequest) {
   } catch (err: unknown) {
     console.error('Gemini error:', err);
     const msg = err instanceof Error ? err.message : '';
-    const userError = msg.includes('503') || msg.includes('Service Unavailable')
-      ? 'Gemini está saturado en este momento. Espera unos segundos e intenta de nuevo.'
-      : msg.includes('404') || msg.includes('no longer available')
-      ? 'Este modelo de Gemini no está disponible para tu API key. Contacta soporte.'
-      : msg.includes('API_KEY') || msg.includes('401') || msg.includes('403')
-      ? 'API key de Gemini inválida. Verifica tu GOOGLE_GENERATIVE_AI_API_KEY en .env.local.'
-      : 'Error al generar los posts. Intenta de nuevo.';
-    return NextResponse.json({ error: userError }, { status: 500 });
+    return NextResponse.json({ error: geminiUserError(msg) }, { status: 500 });
   }
 }

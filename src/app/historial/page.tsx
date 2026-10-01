@@ -5,8 +5,8 @@ import AppLayout from '@/components/AppLayout';
 import CopyButton from '@/components/CopyButton';
 import { getOrCreateSessionId } from '@/lib/session';
 import { PostGenerado } from '@/lib/types';
-import { getSupabase } from '@/lib/supabase';
 import Link from 'next/link';
+import { formatDateRelative } from '@/lib/utils';
 
 export default function HistorialPage() {
   const [historial, setHistorial] = useState<PostGenerado[]>([]);
@@ -17,15 +17,11 @@ export default function HistorialPage() {
     const sessionId = getOrCreateSessionId();
     if (!sessionId) { setLoading(false); return; }
 
-    getSupabase()
-      .from('posts_generados')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setHistorial((data as PostGenerado[]) ?? []);
-        setLoading(false);
-      });
+    fetch('/api/posts', { headers: { 'x-session-id': sessionId } })
+      .then((r) => r.json())
+      .then((json) => setHistorial((json.posts as PostGenerado[]) ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   function toggleExpand(id: string) {
@@ -64,7 +60,7 @@ export default function HistorialPage() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                        {formatDate(item.created_at)}
+                        {formatDateRelative(item.created_at)}
                       </span>
                       <span style={{
                         fontSize: 11,
@@ -155,21 +151,3 @@ function EmptyState() {
   );
 }
 
-function formatDate(iso: string) {
-  const date = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) {
-    return `Hoy, ${date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
-  }
-  if (diffDays === 1) return 'Ayer';
-  if (diffDays < 7) return `Hace ${diffDays} días`;
-
-  return date.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}

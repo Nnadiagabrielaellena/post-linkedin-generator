@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import CopyButton from '@/components/CopyButton';
+import ErrorBanner from '@/components/ErrorBanner';
+import Spinner from '@/components/Spinner';
 import { getOrCreateSessionId } from '@/lib/session';
 
 export default function GenerarPostsPage() {
@@ -100,18 +102,7 @@ export default function GenerarPostsPage() {
             </div>
           </div>
 
-          {error && (
-            <div style={{
-              background: 'color-mix(in srgb, var(--error) 8%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)',
-              borderRadius: 8,
-              padding: '10px 14px',
-              color: 'var(--error)',
-              fontSize: 14,
-            }}>
-              {error}
-            </div>
-          )}
+          <ErrorBanner message={error} />
 
           <div>
             <button type="submit" className="btn-primary" disabled={loading || !idea.trim()}>
@@ -178,20 +169,3 @@ function PostResult({ post, index, total }: { post: string; index: number; total
   );
 }
 
-function Spinner() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      style={{ animation: 'spin 0.8s linear infinite' }}
-    >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-    </svg>
-  );
-}
